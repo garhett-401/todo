@@ -1,87 +1,117 @@
-import React, {useEffect, useState} from 'react';
+import React, { useEffect, useState } from 'react';
 import TodoForm from './form.js';
 import TodoList from './list.js';
 
 import './todo.scss';
+
+const todoAPI = 'https://api-js401.herokuapp.com/api/v1/todo';
 
 // class ToDo extends React.Component {
 const Todo = () => {
 
   const [list, setList] = useState([])
 
-  // constructor(props) {
-  //   super(props);
-  //   this.state = {
-  //     list: [],
-  //   };
-  // }
 
   const addItem = (item) => {
-    item._id = Math.random();
-    item.complete = false;
-    setList([...list, item]);
+    item.due = new Date();
+    fetch(todoAPI, {
+      method: 'post',
+      mode: 'cors',
+      cache: 'no-cache',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(item)
+    })
+      .then(response => response.json())
+      .then(savedItem => {
+        setList([...list, savedItem])
+      })
+      .catch(console.error);
   };
 
-  const toggleComplete = (id) => {
+  const toggleComplete = id => {
 
     let item = list.filter(i => i._id === id)[0] || {};
 
     if (item._id) {
-      item.complete = !item.complete;
-      let newList = list.map(listItem => listItem._id === item._id ? item : listItem);
-      setList(newList);
-    }
 
+      item.complete = !item.complete;
+
+      let url = `${todoAPI}/${id}`;
+
+      fetch(url, {
+        method: 'put',
+        mode: 'cors',
+        cache: 'no-cache',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(item)
+      })
+        .then(response => response.json())
+        .then(savedItem => {
+          setList(list.map(listItem => listItem._id === item._id ? savedItem : listItem));
+        })
+        .catch(console.error);
+    }
   };
 
-  // componentDidMount() {
-  //   let list = [
-  //     { _id: 1, complete: false, text: 'Clean the Kitchen', difficulty: 3, assignee: 'Person A'},
-  //     { _id: 2, complete: false, text: 'Do the Laundry', difficulty: 2, assignee: 'Person A'},
-  //     { _id: 3, complete: false, text: 'Walk the Dog', difficulty: 4, assignee: 'Person B'},
-  //     { _id: 4, complete: true, text: 'Do Homework', difficulty: 3, assignee: 'Person C'},
-  //     { _id: 5, complete: false, text: 'Take a Nap', difficulty: 1, assignee: 'Person B'},
-  //   ];
+  const _getTodoItems = () => {
+    fetch(todoAPI, {
+      method: 'get',
+      mode: 'cors',
+    })
+      .then(data => data.json())
+      .then(data => setList(data.results))
+      .catch(console.error);
+  };
 
-  //   setList({list});
-  // }
+  const toggleDelete = id => {
 
-  useEffect(() => {
-    let list = [
-      { _id: 1, complete: false, text: 'Clean the Kitchen', difficulty: 3, assignee: 'Person A'},
-      { _id: 2, complete: false, text: 'Do the Laundry', difficulty: 2, assignee: 'Person A'},
-      { _id: 3, complete: false, text: 'Walk the Dog', difficulty: 4, assignee: 'Person B'},
-      { _id: 4, complete: true, text: 'Do Homework', difficulty: 3, assignee: 'Person C'},
-      { _id: 5, complete: false, text: 'Take a Nap', difficulty: 1, assignee: 'Person B'},
-    ]
-    setList(list);
-  }, [])
+    let item = list.filter(i => i._id === id)[0] || {};
 
+    if (item._id) {
 
-  // render() {
-    return (
-      <>
-        <header>
-          <h2>
+      item.complete = !item.complete;
+
+      let url = `${todoAPI}/${id}`;
+
+      fetch(url, {
+        method: 'delete',
+        mode: 'cors',
+        cache: 'no-cache',
+        headers: { 'Content-Type': 'application/json' },
+      })
+        .then(savedItem => {
+          _getTodoItems();
+        })
+        .catch(console.error);
+    }
+  };
+
+  useEffect(_getTodoItems, []);
+
+  return (
+    <>
+      <header>
+        <h2>
           There are {list.filter(item => !item.complete).length} Items To Complete
           </h2>
-        </header>
+      </header>
 
-        <section className="todo">
+      <section className="todo">
 
-          <div>
-            <TodoForm handleSubmit={addItem} />
-          </div>
+        <div>
+          <TodoForm handleSubmit={addItem} />
+        </div>
 
-          <div>
-            <TodoList
-              list={list}
-              handleComplete={toggleComplete}
-            />
-          </div>
-        </section>
-      </>
-    );
+        <div>
+          <TodoList
+            list={list}
+            handleComplete={toggleComplete}
+            handleDelete={toggleDelete}
+          />
+        </div>
+      </section>
+    </>
+  );
   // }
 }
 
